@@ -4,39 +4,16 @@ import argparse
 import os
 import io
 import sys
-import fnmatch
 
 import xml.etree.ElementTree as ET
-from os.path import join, split, isdir, isfile, abspath
+from os.path import join, isfile
+from urlparse import urlparse
+from urllib import unquote
 
 
-def gen_m3u_for_dir(mp3_dir, playlist_name=None):
-    print "processing directory {}...".format(mp3_dir)
-    mp3_count = 0
-    mp3_paths = []
-
-    if not isdir(mp3_dir):
-        print "error: {} is not a directory".format(mp3_dir)
-        sys.exit(-1)
-
-    if playlist_name is None:
-        playlist_name = split(abspath(mp3_dir))[-1]
-    playlist_path = playlist_name + ".m3u"
-
-    for path, dirnames, filenames in os.walk(unicode(mp3_dir)):
-        for filename in fnmatch.filter(filenames, "*.mp3"):
-            mp3_path = os.path.join(path, filename)
-            mp3_paths.append(mp3_path)
-            mp3_count += 1
-
-    if len(mp3_paths) == 0:
-        print "found no mp3 files"
-        return
-
-    with io.open(playlist_path, mode="w", encoding="utf8") as fout:
-        for mp3_path in mp3_paths:
-            fout.write(mp3_path + "\n")
-    print "wrote {} mp3 files into {}".format(mp3_count, playlist_path)
+def convert_url_to_path(url):
+    result = unquote(urlparse(url).path).decode('utf8')
+    return result
 
 
 def get_node_for_key(node, key):
@@ -55,7 +32,7 @@ def get_node_for_key(node, key):
         return None
 
 
-def get_playlists_from_library_xml():
+def get_playlists_from_library_xml(blank_prefix=None):
     library_path = join(os.environ["USERPROFILE"], "Music", "iTunes", "iTunes Music Library.xml")
     if not isfile(library_path):
         print "error: cannot find itunes library xml at {}".format(library_path)
@@ -88,13 +65,16 @@ def get_playlists_from_library_xml():
         if track_count > 0:
             with io.open(playlist_path, mode="w", encoding="utf8") as fout:
                 for track_location in track_locations:
-                    fout.write(u"{}\n".format(track_location))
+                    track_path = convert_url_to_path(track_location)
+                    if blank_prefix and track_path.startswith(blank_prefix):
+                        track_path = track_path[len(blank_prefix):]
+                    fout.write(u"{}\n".format(track_path))
             print "wrote {} mp3 files into {}".format(track_count, playlist_path)
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Generate m3u playlists from iTunes')
-    parser.add_argument("dir", help="iTunes Directory")
+    parser = argparse.ArgumentParser(description="Generate m3u playlists from iTunes")
+    parser.add_argument("--blank-prefix", help="Blank out this prefix in all playlist items")
 
     return parser.parse_args()
 
@@ -102,7 +82,7 @@ def get_args():
 def main():
     args = get_args()
 
-    get_playlists_from_library_xml()
+    get_playlists_from_library_xml(blank_prefix=args.blank_prefix)
 
 
 if __name__ == "__main__":
