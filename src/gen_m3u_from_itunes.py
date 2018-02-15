@@ -32,7 +32,29 @@ def get_node_for_key(node, key):
         return None
 
 
-def get_playlists_from_library_xml(blank_prefix=None):
+def album_path(track):
+    return track[:track.rfind("/")]
+
+
+def reverse_tracks(tracks):
+    albums = []
+    album = []
+    for track in tracks:
+        if len(album) == 0 \
+                or album_path(track) == album_path(album[0]):
+            album.append(track)
+        else:
+            albums.append(album)
+            album = [track]
+    if len(album) > 0:
+        albums.append(album)
+    result = []
+    for album in reversed(albums):
+        result = result + sorted(album)
+    return result
+
+
+def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
     library_path = join(os.environ["USERPROFILE"], "Music", "iTunes", "iTunes Music Library.xml")
     if not isfile(library_path):
         print "error: cannot find itunes library xml at {}".format(library_path)
@@ -46,6 +68,8 @@ def get_playlists_from_library_xml(blank_prefix=None):
     playlists = get_node_for_key(root, "Playlists")
     for playlist in playlists:
         playlist_name = get_node_for_key(playlist, "Name")
+        if playlist_name == "Library":
+            continue
         print "processing", playlist_name
 
         playlist_path = playlist_name + ".m3u"
@@ -63,6 +87,8 @@ def get_playlists_from_library_xml(blank_prefix=None):
 
         track_count = len(track_locations)
         if track_count > 0:
+            if reverse:
+                track_locations = reverse_tracks(track_locations)
             with io.open(playlist_path, mode="w", encoding="utf8") as fout:
                 for track_location in track_locations:
                     track_path = convert_url_to_path(track_location)
@@ -75,6 +101,8 @@ def get_playlists_from_library_xml(blank_prefix=None):
 def get_args():
     parser = argparse.ArgumentParser(description="Generate m3u playlists from iTunes")
     parser.add_argument("--blank-prefix", help="Blank out this prefix in all playlist items")
+    parser.add_argument("--reverse", action="store_true", help="Reverse the playlists (keeping album order)")
+    parser.set_defaults(reverse=False)
 
     return parser.parse_args()
 
@@ -82,7 +110,7 @@ def get_args():
 def main():
     args = get_args()
 
-    get_playlists_from_library_xml(blank_prefix=args.blank_prefix)
+    get_playlists_from_library_xml(blank_prefix=args.blank_prefix, reverse=args.reverse)
 
 
 if __name__ == "__main__":
