@@ -75,7 +75,7 @@ def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
         playlist_path = playlist_name + ".m3u"
         playlist_items = get_node_for_key(playlist, "Playlist Items")
         if playlist_items is None:
-            print "found not playlist items"
+            print "found no playlist items"
             continue
 
         track_locations = []
@@ -86,15 +86,19 @@ def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
             track_locations.append(track_location)
 
         track_count = len(track_locations)
+        track_paths = []
         if track_count > 0:
             if reverse:
                 track_locations = reverse_tracks(track_locations)
-            with io.open(playlist_path, mode="w", encoding="utf8") as fout:
-                for track_location in track_locations:
-                    track_path = convert_url_to_path(track_location)
-                    if blank_prefix and track_path.startswith(blank_prefix):
-                        track_path = track_path[len(blank_prefix):]
-                    fout.write(u"{}\n".format(track_path))
+            for track_location in track_locations:
+                track_path = convert_url_to_path(track_location)
+                if blank_prefix and track_path.startswith(blank_prefix):
+                    track_path = track_path[len(blank_prefix):]
+                track_paths.append(track_path)
+
+        with io.open(playlist_path, mode="w", encoding="utf8") as fout:
+            for track_path in track_paths:
+                fout.write(u"{}\n".format(track_path))
             print "wrote {} mp3 files into {}".format(track_count, playlist_path)
 
 
@@ -110,7 +114,9 @@ def get_args():
 def main():
     args = get_args()
 
-    get_playlists_from_library_xml(blank_prefix=args.blank_prefix, reverse=args.reverse)
+    get_playlists_from_library_xml(
+        blank_prefix=args.blank_prefix,
+        reverse=args.reverse)
 
 
 if __name__ == "__main__":
