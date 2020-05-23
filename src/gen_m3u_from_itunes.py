@@ -24,7 +24,7 @@ def get_node_for_key(node, key):
             if el.tag == "key" and el.text == key:
                 el = next(nodes)
                 if el.tag in ("dict", "array"):
-                    return el.getchildren()
+                    return list(el)
                 if el.tag in ("string", "integer"):
                     return el.text
                 return el
@@ -68,7 +68,8 @@ def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
     playlists = get_node_for_key(root, "Playlists")
     for playlist in playlists:
         playlist_name = get_node_for_key(playlist, "Name")
-        if playlist_name == "Library":
+        playlist_kind = get_node_for_key(playlist, "Distinguished Kind")
+        if playlist_kind is not None:
             continue
         print("processing", playlist_name)
 
