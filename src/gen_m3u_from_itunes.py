@@ -5,14 +5,14 @@ import os
 import io
 import sys
 
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElementTree
 from os.path import join, isfile
-from urlparse import urlparse
-from urllib import unquote
+from urllib.parse import urlparse
+from urllib.parse import unquote
 
 
 def convert_url_to_path(url):
-    result = unquote(urlparse(url).path).decode('utf8')
+    result = unquote(urlparse(url).path)
     return result
 
 
@@ -20,9 +20,9 @@ def get_node_for_key(node, key):
     nodes = iter(node)
     try:
         while True:
-            el = nodes.next()
+            el = next(nodes)
             if el.tag == "key" and el.text == key:
-                el = nodes.next()
+                el = next(nodes)
                 if el.tag in ("dict", "array"):
                     return el.getchildren()
                 if el.tag in ("string", "integer"):
@@ -57,11 +57,11 @@ def reverse_tracks(tracks):
 def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
     library_path = join(os.environ["USERPROFILE"], "Music", "iTunes", "iTunes Music Library.xml")
     if not isfile(library_path):
-        print "error: cannot find itunes library xml at {}".format(library_path)
+        print("error: cannot find itunes library xml at {}".format(library_path))
         sys.exit(-1)
 
-    root = ET.parse(library_path).getroot()
-    root = iter(root).next()
+    root = ElementTree.parse(library_path).getroot()
+    root = next(iter(root))
 
     tracks = get_node_for_key(root, "Tracks")
 
@@ -70,12 +70,12 @@ def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
         playlist_name = get_node_for_key(playlist, "Name")
         if playlist_name == "Library":
             continue
-        print "processing", playlist_name
+        print("processing", playlist_name)
 
         playlist_path = playlist_name + ".m3u"
         playlist_items = get_node_for_key(playlist, "Playlist Items")
         if playlist_items is None:
-            print "found no playlist items"
+            print("found no playlist items")
             continue
 
         track_locations = []
@@ -98,8 +98,8 @@ def get_playlists_from_library_xml(blank_prefix=None, reverse=None):
 
         with io.open(playlist_path, mode="w", encoding="utf8") as fout:
             for track_path in track_paths:
-                fout.write(u"{}\n".format(track_path))
-            print "wrote {} mp3 files into {}".format(track_count, playlist_path)
+                fout.write("{}\n".format(track_path))
+            print("wrote {} mp3 files into {}".format(track_count, playlist_path))
 
 
 def get_args():
